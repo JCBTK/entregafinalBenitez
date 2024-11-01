@@ -1,0 +1,21 @@
+Rutas 
+
+Registrar usuario:
+POST /api/users/register
+
+Iniciar sesión:
+POST /api/users/login
+
+Obtener todos los usuarios:
+GET /api/users
+
+Obtener usuario actual:
+GET /api/users/current
+Requiere autenticación.
+
+Actualizar usuario:
+PUT /api/users/:id
+
+Eliminar usuario:
+DELETE /api/users/:id
+Requiere autenticación.
