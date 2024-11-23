@@ -4,6 +4,7 @@ import userRouter from './routes/userRouter.js';
 import passport from 'passport';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import cartRouter from './routes/cartRouter.js';
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(passport.initialize());
 app.use('/api/users', userRouter);
+app.use('/api/carts', cartRouter);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

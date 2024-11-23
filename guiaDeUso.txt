@@ -1,11 +1,5 @@
 Rutas 
 
-Registrar usuario:
-POST /api/users/register
-
-Iniciar sesión:
-POST /api/users/login
-
 Obtener todos los usuarios:
 GET /api/users
 
@@ -19,3 +13,27 @@ PUT /api/users/:id
 Eliminar usuario:
 DELETE /api/users/:id
 Requiere autenticación.
+
+
+Registrar un Usuario Administrador:
+
+Realiza una solicitud POST /api/users/register con un 
+cuerpo como este:
+{
+  "name": "Admin",
+  "email": "profe@ejemplo.com",
+  "password": "prueba",
+  "role": "admin"
+}
+
+Realiza una solicitud POST /api/users/login con el 
+correo y contraseña del administrador:
+{
+  "email": "profe@ejemplo.com",
+  "password": "prueba",
+}
+Copia el token generado.
+
+Agrega el token al encabezado de tus solicitudes:
+
+Authorization: Bearer <aca pones el token que te dan en el paso anterior>
