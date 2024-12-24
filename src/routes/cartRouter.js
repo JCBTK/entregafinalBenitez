@@ -1,114 +1,53 @@
 import { Router } from "express";
-import Cart from "../models/cartModel.js";
-import Product from "../models/productModel.js";
-import Ticket from "../models/ticketModel.js";
-import { v4 as uuidv4 } from "uuid";
+import cartRepository from "../repositories/cartRepository.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
+import { roleMiddleware } from "../middlewares/roleMiddleware.js";
 
 const router = Router();
 
-router.get("/", async (req, res) => {
+router.get("/", authMiddleware, roleMiddleware("admin"), async (req, res) => {
     try {
-        const carts = await Cart.find().populate("products.product");
+        const carts = await cartRepository.getAllCarts();
         res.status(200).json(carts);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: "Error al obtener los carritos" });
+        res.status(500).json({ message: error.message });
     }
 });
 
-router.get("/:cid", async (req, res) => {
+router.get("/:cid", authMiddleware, async (req, res) => {
     try {
         const { cid } = req.params;
-        const cart = await cartRepository.getById(cid);
-        if (!cart) {
-            return res.status(404).json({ message: "Carrito no encontrado" });
-        }
+        const cart = await cartRepository.getCartById(cid);
         res.status(200).json(cart);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: "Error al obtener el carrito" });
+        res.status(500).json({ message: error.message });
     }
 });
 
-router.post('/:cid/products/:pid',authMiddleware,roleMiddleware('user'), async (req, res) => {
-        try {
-            const { cid, pid } = req.params;
-            const { quantity } = req.body;
-
-            const cart = await cartRepository.getById(cid);
-            if (!cart) {
-                return res.status(404).json({ message: 'Carrito no encontrado' });
-            }
-
-            const product = await productRepository.getById(pid);
-            if (!product) {
-                return res.status(404).json({ message: 'Producto no encontrado' });
-            }
-
-            const productIndex = cart.products.findIndex(
-                (item) => item.product.toString() === pid
-            );
-
-            if (productIndex > -1) {
-                cart.products[productIndex].quantity += quantity;
-            } else {
-                cart.products.push({ product: pid, quantity });
-            }
-
-            await cartRepository.update(cid, cart);
-            res.status(200).json({ message: 'Producto agregado al carrito', cart });
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ message: 'Error al agregar el producto al carrito' });
-        }
-    }
-);
-
-router.post("/:cid/purchase", async (req, res) => {
+router.post("/:cid/products/:pid", authMiddleware, roleMiddleware("user"), async (req, res) => {
     try {
-        const { cid } = req.params;
-        const cart = await cartRepository.getById(cid);
-        if (!cart) {
-            return res.status(404).json({ message: "Carrito no encontrado" });
-        }
-
-        let totalAmount = 0;
-        const productsNotPurchased = [];
-
-        for (const item of cart.products) {
-            const product = item.product;
-            if (product.stock >= item.quantity) {
-                product.stock -= item.quantity;
-                totalAmount += product.price * item.quantity;
-                await product.save();
-            } else {
-                productsNotPurchased.push(product._id);
-            }
-        }
-
-        if (totalAmount > 0) {
-            const ticket = await Ticket.create({
-                code: uuidv4(),
-                amount: totalAmount,
-                purchaser: req.user.email,
-            });
-
-            cart.products = cart.products.filter((item) =>
-                productsNotPurchased.includes(item.product._id)
-            );
-            await cart.save();
-
-            res.status(200).json({ ticket, productsNotPurchased });
-        } else {
-            res.status(400).json({
-                message:
-                    "No se pudo procesar la compra. Verifica el stock de los productos.",
-                productsNotPurchased,
-            });
-        }
+        const { cid, pid } = req.params;
+        const { quantity } = req.body;
+        const updatedCart = await cartRepository.addProductToCart(cid, pid, quantity);
+        res.status(200).json({ message: "Producto agregado al carrito", cart: updatedCart });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: "Error al procesar la compra" });
+        res.status(500).json({ message: error.message });
     }
 });
+
+router.post("/:cid/purchase", authMiddleware, async (req, res) => {
+    try {
+        const { cid } = req.params;
+        const userEmail = req.user.email;
+        const result = await cartRepository.processPurchase(cid, userEmail);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
 export default router;
